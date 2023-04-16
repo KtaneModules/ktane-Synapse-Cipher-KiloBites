@@ -14,22 +14,39 @@ public class SynapseCipherScript : MonoBehaviour {
 	public KMBombModule Module;
 	public KMColorblindMode Colorblind;
 
-	public KMSelectable[] colorButtons;
+	public KMSelectable[] colorButtons, mainButtons;
 	public KMSelectable back, submit;
 
-	public GameObject[] squares, buttonObj;
+	public GameObject[] squares;
 	public GameObject mainWindow, submissionWindow;
+	public GameObject statusLight;
+
+	public Material[] colors;
+	public Material[] screenColors;
+	public Material statusLightUnsolvedColor;
+	public MeshRenderer[] squareRender;
+	public MeshRenderer screen, statusLightObj;
+	public TextMesh[] buttonCB, squareCB, screenText;
 
 	static int moduleIdCounter = 1;
 	int moduleId;
 	private bool moduleSolved;
+	private bool isActive;
 
 	private bool cbActive;
 
+	private float increment = 1f;
+	private float step;
+
 	Data data = new Data();
 	private string word, encrypted, colorEncrypted;
-	private string[] keywords = new string[2];
+	private string[] keywords = new string[3];
 	private string rotatingSquareShiftKW;
+	private bool[] xSub = new bool[6];
+	private string sub;
+	private int pageIx = 0;
+
+	private static readonly string[] colorNames = { "Green", "Red", "Blue", "Yellow", "Jade" };
 
 	private static string baseConversion(int input, int ba)
 	{
@@ -59,17 +76,47 @@ public class SynapseCipherScript : MonoBehaviour {
 		{
 			color.OnInteract += delegate () { colorPress(color); return false; };
 		}
+		foreach (KMSelectable mainButton in mainButtons)
+		{
+			mainButton.OnInteract += delegate () { mainPress(mainButton); return false; };
+		}
 		back.OnInteract += delegate () { backPress(); return false; };
 		submit.OnInteract += delegate () { submitPress(); return false; };
 
 		cbActive = Colorblind.ColorblindModeActive;
+
+		Module.OnActivate += onActivate;
     }
 
 	
 	void Start()
     {
 		wordSelection();
+
+		foreach (TextMesh square in squareCB)
+		{
+			square.text = "";
+		}
+		for (int i = 0; i < 5; i++)
+		{
+			buttonCB[i].text = cbActive ? colorNames[i].ToUpperInvariant() : "";
+		}
+		foreach (TextMesh screen in screenText)
+		{
+			screen.text = "";
+		}
+		StartCoroutine(startUp());
     }
+
+	IEnumerator startUp()
+	{
+		mainWindow.SetActive(false);
+		submissionWindow.SetActive(false);
+
+		yield return new WaitForSeconds(1);
+		screen.material = screenColors[1];
+		yield return null;
+	}
 
 	string encodingColorSeq(string word)
 	{
@@ -94,19 +141,53 @@ public class SynapseCipherScript : MonoBehaviour {
 
 		rotatingSquareShiftKW = data.PickWord(6);
 
-		for (int i = 0; i < 2; i++)
+		for (int i = 0; i < 3; i++)
 		{
 			keywords[i] = data.PickWord(3, 8);
 		}
 
+		for (int i = 0; i < 6; i++)
+		{
+			if (word[i] == 'X')
+			{
+				xSub[i] = true;
+				encrypted += "ABCDEFGHIJKLMNOPQRSTUVWYZ"[rnd.Range(0, 25)];
+			}
+			else
+			{
+				encrypted += word[i];
+			}
+		}
+
 		var base36Sum = Bomb.GetSerialNumber().Select(x => "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".IndexOf(x)).Sum();
 
-		string rotatingSqaureKey = getKey(keywords[1], "ABCDEFGHIJKLMNOPQRSTUVWYZ", Bomb.GetModuleNames().Any(x => "ƎNA Cipher".Contains(x) || "Holographic Memory".Contains(x)) || base36Sum % 2 != 0);
+		string rotatingSqaureKeyA = getKey(keywords[1].Replace('X', 'Y'), "ABCDEFGHIJKLMNOPQRSTUVWYZ", Bomb.GetModuleNames().Any(x => "ƎNA Cipher".Contains(x)) || base36Sum % 2 != 0);
+		string rotatingSquareKeyB = getKey(keywords[2].Replace('X', 'Y'), "ABCDEFGHIJKLMNOPQRSTUVWYZ", Bomb.GetModuleNames().Any(x => "Holographic Memory".Contains(x)) || Bomb.GetSerialNumberNumbers().Sum() % 2 == 0);
+
+		encryptionStuff(rotatingSqaureKeyA, rotatingSquareKeyB);
+	}
+
+	void encryptionStuff(string keyA, string keyB)
+	{
+
+
+		for (int i = 0; i < 6; i++)
+		{
+			if (xSub[i])
+			{
+				sub += encrypted[i];
+				encrypted = encrypted.Substring(0, i) + "X" + encrypted.Substring(i + 1);
+			}
+			else
+			{
+				sub += "ABCDEFGHIJKLMNOPQRSTUVWYZ"[rnd.Range(0, 25)];
+			}
+		}
 	}
 
 	void colorPress(KMSelectable color)
 	{
-		if (moduleSolved)
+		if (moduleSolved || !isActive)
 		{
 			return;
 		}
@@ -120,9 +201,53 @@ public class SynapseCipherScript : MonoBehaviour {
 		}
 	}
 
+	void mainPress(KMSelectable button)
+	{
+		if (moduleSolved || !isActive)
+		{
+			return;
+		}
+
+		for (int i = 0; i < 3; i++)
+		{
+			if (button == mainButtons[i])
+			{
+				switch (i)
+				{
+					case 0:
+						pageIx--;
+						pageInfo();
+						break;
+					case 1:
+						subMode();
+						break;
+					case 2:
+						pageIx++;
+						pageInfo();
+						break;
+				}
+			}
+		}
+
+        pageIx = pageIx < 0 ? 0 : pageIx > 1 ? 1 : pageIx;
+    }
+
+	void onActivate()
+	{
+		mainWindow.SetActive(true);
+		screen.material = screenColors[2];
+		isActive = true;
+		pageInfo();
+	}
+
+	void pageInfo()
+	{
+
+	}
+
 	void backPress()
 	{
-		if (moduleSolved)
+		if (moduleSolved || !isActive)
 		{
 			return;
 		}
@@ -130,16 +255,22 @@ public class SynapseCipherScript : MonoBehaviour {
 
 	void submitPress()
 	{
-		if (moduleSolved)
+		if (moduleSolved || !isActive)
 		{
 			return;
 		}
 	}
-	
-	
-	void Update()
-    {
 
+	void subMode()
+	{
+
+	}
+	
+	
+	void FixedUpdate()
+    {
+		step += increment;
+		statusLight.transform.localRotation = Quaternion.Euler((step * Mathf.PI) / 2f, (step * Mathf.PI) / 4f, (step * Mathf.PI) / 6f);
     }
 
 	// Twitch Plays
