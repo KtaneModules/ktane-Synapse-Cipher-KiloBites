@@ -62,7 +62,7 @@ public class SynapseCipherScript : MonoBehaviour {
 		return current;
 	}
 
-	private static string getKey(string kw, string alphabet, bool kwFirst)
+	private string getKey(string kw, string alphabet, bool kwFirst)
 	{
 		return (kwFirst ? (kw + alphabet) : alphabet.Except(kw).Concat(kw)).Distinct().Join("");
 	}
@@ -169,7 +169,40 @@ public class SynapseCipherScript : MonoBehaviour {
 
 	void encryptionStuff(string keyA, string keyB)
 	{
-
+		/* 
+		 * DOUBLE SQUARE ROTATION CIPHER
+		 * 00 01 02 03 04
+		 * 05 06 07 08 09
+		 * 10 11 12 13 14
+		 * 15 16 17 18 19
+		 * 20 21 22 23 24
+		 */
+		Debug.Log(word);
+		Debug.Log(keyA);
+		Debug.Log(keyB);
+		var idxesOuterSquare = new[] { 0, 5, 10, 15, 20, 21, 22, 23, 24, 19, 14, 9, 4, 3, 2, 1 };
+		var idxesInnerSquare = new[] { 6, 11, 16, 17, 18, 13, 8, 7 };
+		var valuesKeywordMod10 = rotatingSquareShiftKW.Select(a => "-ABCDEFGHIJKLMNOPQRSTUVWXYZ".IndexOf(a) % 10);
+		Debug.Log(valuesKeywordMod10.Join());
+		for (var o = 0; o < word.Length; o++)
+        {
+			var curLetter = word[o];
+			var idxCurLetterInGrid = (o % 2 == 0 ? keyA : keyB).IndexOf(curLetter);
+			var replacementLetter = (o % 2 == 0 ? keyB : keyA)[12];
+			Debug.Log(idxCurLetterInGrid);
+			if (idxesInnerSquare.Contains(idxCurLetterInGrid))
+            {
+				var idxFromInner = idxesInnerSquare.IndexOf(a => a == idxCurLetterInGrid);
+				replacementLetter = (o % 2 == 0 ? keyA : keyB)[idxesInnerSquare[(idxFromInner + valuesKeywordMod10.ElementAt(o)) % 8]];
+			}
+			else if (idxesOuterSquare.Contains(idxCurLetterInGrid))
+            {
+				var idxFromOuter = idxesOuterSquare.IndexOf(a => a == idxCurLetterInGrid);
+				replacementLetter = (o % 2 == 0 ? keyA : keyB)[idxesOuterSquare[(idxFromOuter + valuesKeywordMod10.ElementAt(o)) % 16]];
+			}
+			Debug.LogFormat("{0} -> {1}", word[o], replacementLetter);
+			encrypted = encrypted.Substring(0, o) + replacementLetter + encrypted.Substring(o + 1);
+		}
 
 		for (int i = 0; i < 6; i++)
 		{
