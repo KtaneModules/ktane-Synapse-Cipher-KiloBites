@@ -156,7 +156,10 @@ public class SynapseCipherScript : MonoBehaviour {
 
 		Module.OnActivate += onActivate;
     }
-
+	void QuickLog(string toLog, params object[] args)
+    {
+		Debug.LogFormat("[Synpase Cipher #{0}] {1}", moduleId, string.Format(toLog, args));
+    }
 	
 	void Start()
     {
@@ -240,10 +243,10 @@ public class SynapseCipherScript : MonoBehaviour {
 
 		string superPositionKey = getKey(superPositionKW[0], "ABCDEFGHIJKLMNOPQRSTUVWXYZ", isPrime(Bomb.GetPortCount()));
 
-		encryptionStuff(rotatingSqaureKeyA, rotatingSquareKeyB);
+		encryptionStuff(rotatingSqaureKeyA, rotatingSquareKeyB, superPositionKey);
 	}
 
-	void encryptionStuff(string keyA, string keyB)
+	void encryptionStuff(string keyA, string keyB, string keyC)
 	{
 		/* 
 		 * DOUBLE SQUARE ROTATION CIPHER
@@ -253,9 +256,9 @@ public class SynapseCipherScript : MonoBehaviour {
 		 * 15 16 17 18 19
 		 * 20 21 22 23 24
 		 */
-		Debug.Log(word);
-		Debug.Log(keyA);
-		Debug.Log(keyB);
+		QuickLog(word);
+		QuickLog("KEY A: {0}" , keyA);
+		QuickLog("KEY B: {0}" , keyB);
 		var idxesOuterSquare = new[] { 0, 5, 10, 15, 20, 21, 22, 23, 24, 19, 14, 9, 4, 3, 2, 1 };
 		var idxesInnerSquare = new[] { 6, 11, 16, 17, 18, 13, 8, 7 };
 		var valuesKeywordMod10 = rotatingSquareShiftKW.Select(a => "-ABCDEFGHIJKLMNOPQRSTUVWXYZ".IndexOf(a) % 10);
@@ -276,7 +279,7 @@ public class SynapseCipherScript : MonoBehaviour {
 				var idxFromOuter = idxesOuterSquare.IndexOf(a => a == idxCurLetterInGrid);
 				replacementLetter = (o % 2 == 0 ? keyA : keyB)[idxesOuterSquare[(idxFromOuter + valuesKeywordMod10.ElementAt(o)) % 16]];
 			}
-			Debug.LogFormat("{0} -> {1}", word[o], replacementLetter);
+			QuickLog("{0} -> {1}", word[o], replacementLetter);
 			encrypted = encrypted.Substring(0, o) + replacementLetter + encrypted.Substring(o + 1);
 		}
 
@@ -372,10 +375,18 @@ public class SynapseCipherScript : MonoBehaviour {
 
 		encrypted = newEncrypt;
 
-
-
-
-
+		// SUPERPOSITIION CIPHER
+		//var offsetsAll = new int[word.Length];
+		var finalEncrypted = "";
+		QuickLog("KEY C: {0}" ,keyC);
+		for (var p = 0; p < word.Length; p++)
+        {
+			var offsetCurLetter = (keyC.IndexOf(superPositionKW[1][p]) - keyC.IndexOf(superPositionKW[2][p]) + 26) % 26;
+			QuickLog("{0} -> {1} ({2})", superPositionKW[1][p], superPositionKW[2][p], offsetCurLetter);
+			QuickLog("{0} -> {1}", encrypted[p], keyC[(keyC.IndexOf(encrypted[p]) + offsetCurLetter) % 26]);
+			finalEncrypted += keyC[(keyC.IndexOf(encrypted[p]) + offsetCurLetter) % 26];
+		}
+		encrypted = finalEncrypted;
 	}
 
 	void colorPress(KMSelectable color)
