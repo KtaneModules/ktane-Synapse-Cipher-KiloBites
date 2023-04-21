@@ -318,12 +318,16 @@ public class SynapseCipherScript : MonoBehaviour {
 			binaryOutput += logicFlip ? xnorBits(threeBit1, threeBit2) : xorBits(threeBit1, threeBit2);
 			logicFlip = !logicFlip;
 		}
+
+		QuickLog(binaryOutput);
 		string[] convertedLetters = new string[6];
 
 		for (int i = 0; i < 6; i++)
 		{
 			convertedLetters[i] = letterToTernary(encrypted[i]);
 		}
+
+		QuickLog(convertedLetters.Join(", "));
 
 		int[][] convertNum = new int[6][];
 
@@ -355,6 +359,8 @@ public class SynapseCipherScript : MonoBehaviour {
 				}
 			}
 		}
+
+		QuickLog("After manipulation: {0}", convertNum.Select(x => x.Join("")).Join(", "));
 
 		int[] concat = new int[6];
 
