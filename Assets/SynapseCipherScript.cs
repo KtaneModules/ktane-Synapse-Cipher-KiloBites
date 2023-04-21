@@ -15,7 +15,7 @@ public class SynapseCipherScript : MonoBehaviour {
 	public KMColorblindMode Colorblind;
 
 	public KMSelectable[] colorButtons, mainButtons;
-	public KMSelectable back, submit;
+	public KMSelectable back, submit, reset;
 
 	public GameObject[] squares;
 	public GameObject mainWindow, submissionWindow;
@@ -33,10 +33,11 @@ public class SynapseCipherScript : MonoBehaviour {
 	int moduleId;
 	private bool moduleSolved;
 	private bool isActive;
+	private bool inSubmission;
 
 	private bool cbActive;
 
-	private float increment = 1f;
+	private readonly float increment = 1f;
 	private float step;
 
 	Data data = new Data();
@@ -48,6 +49,8 @@ public class SynapseCipherScript : MonoBehaviour {
 	private bool[] jSub = new bool[6];
 	private string sub;
 	private int pageIx = 0;
+	private int colorIx = 0;
+	private string submissionString;
 
 	private static readonly string[] colorNames = { "Green", "Red", "Blue", "Yellow", "Jade" };
 
@@ -151,6 +154,7 @@ public class SynapseCipherScript : MonoBehaviour {
 		}
 		back.OnInteract += delegate () { backPress(); return false; };
 		submit.OnInteract += delegate () { submitPress(); return false; };
+		reset.OnInteract += delegate () { resetPress(); return false; };
 
 		cbActive = Colorblind.ColorblindModeActive;
 
@@ -397,18 +401,27 @@ public class SynapseCipherScript : MonoBehaviour {
 
 	void colorPress(KMSelectable color)
 	{
-		if (moduleSolved || !isActive)
+		color.AddInteractionPunch(0.4f);
+
+		if (moduleSolved || !isActive || !inSubmission)
 		{
 			return;
 		}
 
 		for (int i = 0; i < 5; i++)
 		{
-			if (color == colorButtons[i])
+			if (color == colorButtons[i] && colorIx < 11)
 			{
-
-			}
+				Audio.PlaySoundAtTransform(colorNames[i], transform);
+				submissionString += i;
+				squares[colorIx].SetActive(true);
+				squareRender[colorIx].material = colors[i];
+				squareCB[colorIx].text = cbActive ? colorNames[i] : "";
+				colorIx++;
+			}			
 		}
+
+		colorIx = colorIx > 11 ? 11 : colorIx;
 	}
 
 	void mainPress(KMSelectable button)
@@ -436,7 +449,7 @@ public class SynapseCipherScript : MonoBehaviour {
 				{
 					case 0:
 						pageIx--;
-                        pageIx = pageIx < 0 ? 0 : pageIx > 3 ? 3 : pageIx;
+                        pageIx %= 4;
                         pageInfo();
 						break;
 					case 1:
@@ -444,7 +457,7 @@ public class SynapseCipherScript : MonoBehaviour {
 						break;
 					case 2:
 						pageIx++;
-                        pageIx = pageIx < 0 ? 0 : pageIx > 3 ? 3 : pageIx;
+                        pageIx %= 4;
                         pageInfo();
 						break;
 				}
@@ -506,9 +519,16 @@ public class SynapseCipherScript : MonoBehaviour {
 
 	void backPress()
 	{
-		if (moduleSolved || !isActive)
+		if (moduleSolved || !isActive || !inSubmission)
 		{
 			return;
+		}
+
+		if (colorIx > 0)
+		{
+			submissionString = submissionString.Remove(submissionString.Length - 1);
+			squares[colorIx].SetActive(false);
+			colorIx--;
 		}
 	}
 
@@ -518,11 +538,32 @@ public class SynapseCipherScript : MonoBehaviour {
 		{
 			return;
 		}
+
+		StartCoroutine(submissionString.Equals(colorEncrypted) ? solve() : strike());
+	}
+
+	IEnumerator solve()
+	{
+		yield return null;
+	}
+
+	IEnumerator strike()
+	{
+		yield return null;
 	}
 
 	void subMode()
 	{
+		inSubmission = true;
+		mainWindow.SetActive(false);
+		submissionWindow.SetActive(true);
+	}
 
+	void resetPress()
+	{
+		inSubmission = false;
+		submissionWindow.SetActive(false);
+		mainWindow.SetActive(true);
 	}
 	
 	
