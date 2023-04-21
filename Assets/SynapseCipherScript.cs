@@ -266,13 +266,14 @@ public class SynapseCipherScript : MonoBehaviour {
 		var idxesOuterSquare = new[] { 0, 5, 10, 15, 20, 21, 22, 23, 24, 19, 14, 9, 4, 3, 2, 1 };
 		var idxesInnerSquare = new[] { 6, 11, 16, 17, 18, 13, 8, 7 };
 		var valuesKeywordMod10 = rotatingSquareShiftKW.Select(a => "-ABCDEFGHIJKLMNOPQRSTUVWXYZ".IndexOf(a) % 10);
-		Debug.Log(valuesKeywordMod10.Join());
+		QuickLog("Alphabetic positions of {1}, mod 10: {0}", valuesKeywordMod10.Join(), rotatingSquareShiftKW);
+		//Debug.Log(valuesKeywordMod10.Join());
 		for (var o = 0; o < word.Length; o++)
 		{
 			var curLetter = word[o];
 			var idxCurLetterInGrid = (o % 2 == 0 ? keyA : keyB).IndexOf(curLetter);
-			var replacementLetter = (o % 2 == 0 ? keyB : keyA)[12];
-			Debug.Log(idxCurLetterInGrid);
+			var replacementLetter = (o % 2 == 0 ? keyA : keyB)[12];
+			//Debug.Log(idxCurLetterInGrid);
 			if (idxesInnerSquare.Contains(idxCurLetterInGrid))
 			{
 				var idxFromInner = idxesInnerSquare.IndexOf(a => a == idxCurLetterInGrid);
@@ -309,7 +310,7 @@ public class SynapseCipherScript : MonoBehaviour {
 			binary[i] = Convert.ToString(range, 2).PadLeft(6, '0');
 		}
 
-		Debug.Log(binary.Join(", "));
+		QuickLog("Binary displayed: {0}",binary.Join(", "));
 
 		var binaryOutput = string.Empty;
 		var logicFlip = Bomb.GetSerialNumberNumbers().First() % 2 != Bomb.GetSerialNumberNumbers().Last() % 2;
@@ -347,20 +348,18 @@ public class SynapseCipherScript : MonoBehaviour {
 
 		for (int i = 0; i < 6; i++)
 		{
-			for (int j = 0; j < 3; j++)
+			if (binaryOutput[i] == '1')
 			{
-				if (binaryOutput[i] == '1')
+				for (int j = 0; j < 3; j++)
 				{
+				
 					convertNum[i][j]--;
 					if (convertNum[i][j] < 0)
-					{
 						convertNum[i][j] = 2;
-					}
-					else if (convertNum[i][0] == 0 && convertNum[i][1] == 0 && convertNum[i][2] == 0)
-					{
-						convertNum[i][j] = 2;
-					}
 				}
+				if (convertNum[i].All(a => a == 0))
+					for (int j = 0; j < 3; j++)
+							convertNum[i][j] = 2;
 			}
 		}
 
@@ -449,7 +448,7 @@ public class SynapseCipherScript : MonoBehaviour {
 				{
 					case 0:
 						pageIx--;
-                        pageIx %= 4;
+                        pageIx = (pageIx % 4 + 4) % 4;
                         pageInfo();
 						break;
 					case 1:
