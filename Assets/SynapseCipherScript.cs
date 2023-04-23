@@ -50,9 +50,11 @@ public class SynapseCipherScript : MonoBehaviour {
 	private string sub;
 	private int pageIx = 0;
 	private int colorIx = 0;
-	private string submissionString;
+	private string submissionString = string.Empty;
 
 	private static readonly string[] colorNames = { "Green", "Red", "Blue", "Yellow", "Jade" };
+
+	private List<int> colorCBIx = new List<int>();
 
 	private string baseConversion(int input, int ba)
 	{
@@ -162,7 +164,7 @@ public class SynapseCipherScript : MonoBehaviour {
     }
 	void QuickLog(string toLog, params object[] args)
     {
-		Debug.LogFormat("[Synpase Cipher #{0}] {1}", moduleId, string.Format(toLog, args));
+		Debug.LogFormat("[Synapse Cipher #{0}] {1}", moduleId, string.Format(toLog, args));
     }
 	
 	void Start()
@@ -173,15 +175,22 @@ public class SynapseCipherScript : MonoBehaviour {
 		{
 			square.text = "";
 		}
-		for (int i = 0; i < 5; i++)
-		{
-			buttonCB[i].text = cbActive ? colorNames[i].ToUpperInvariant() : "";
-		}
 		foreach (TextMesh screen in screenText)
 		{
 			screen.text = "";
 		}
+		foreach (var squareObj in squares)
+		{
+			squareObj.SetActive(false);
+		}
 		StartCoroutine(startUp());
+		int[] colorIx = colorEncrypted.Select(x => "01234".IndexOf(x)).ToArray();
+		string colorSeq = "";
+		for (int i = 0; i <  colorIx.Length; i++)
+		{
+			colorSeq += "GRBYJ"[colorIx[i]];
+		}
+		QuickLog("The following color sequence must be submitted: {0}", colorSeq);
     }
 
 	IEnumerator startUp()
@@ -260,7 +269,7 @@ public class SynapseCipherScript : MonoBehaviour {
 		 * 15 16 17 18 19
 		 * 20 21 22 23 24
 		 */
-		QuickLog(word);
+		QuickLog("The decrypted word is: {0}", word);
 		QuickLog("KEY A: {0}" , keyA);
 		QuickLog("KEY B: {0}" , keyB);
 		var idxesOuterSquare = new[] { 0, 5, 10, 15, 20, 21, 22, 23, 24, 19, 14, 9, 4, 3, 2, 1 };
@@ -301,6 +310,8 @@ public class SynapseCipherScript : MonoBehaviour {
 				sub += "ABCDEFGHIKLMNOPQRSTUVWXYZ"[rnd.Range(0, 25)];
 			}
 		}
+
+		QuickLog("After Double Square Rotation Cipher: {0}", encrypted);
 
 		// LOGICAL TERNARY MANUPULATION CIPHER
 
@@ -373,8 +384,6 @@ public class SynapseCipherScript : MonoBehaviour {
 			concat[i] = baseTo10(concat[i], 3);
 		}
 
-		Debug.Log(concat.Join());
-
 		string newEncrypt = string.Empty;
 
 		for (int i = 0; i < 6; i++)
@@ -384,7 +393,9 @@ public class SynapseCipherScript : MonoBehaviour {
 
 		encrypted = newEncrypt;
 
-		// SUPERPOSITIION CIPHER
+		QuickLog("After Logical Ternary Manipulation Cipher: {0}", encrypted);
+
+		// SUPERPOSITION CIPHER
 		//var offsetsAll = new int[word.Length];
 		var finalEncrypted = "";
 		QuickLog("KEY C: {0}" ,keyC);
@@ -396,31 +407,32 @@ public class SynapseCipherScript : MonoBehaviour {
 			finalEncrypted += keyC[(keyC.IndexOf(encrypted[p]) + offsetCurLetter) % 26];
 		}
 		encrypted = finalEncrypted;
+
+		QuickLog("After Superposition Cipher: {0}", encrypted);
 	}
 
 	void colorPress(KMSelectable color)
 	{
 		color.AddInteractionPunch(0.4f);
 
-		if (moduleSolved || !isActive || !inSubmission)
+		if (moduleSolved || !isActive || !inSubmission || colorIx > 24)
 		{
 			return;
 		}
 
 		for (int i = 0; i < 5; i++)
 		{
-			if (color == colorButtons[i] && colorIx < 11)
+			if (color == colorButtons[i] && colorIx < 24)
 			{
 				Audio.PlaySoundAtTransform(colorNames[i], transform);
 				submissionString += i;
 				squares[colorIx].SetActive(true);
 				squareRender[colorIx].material = colors[i];
-				squareCB[colorIx].text = cbActive ? colorNames[i] : "";
+				squareCB[colorIx].text = cbActive ? colorNames[i][0].ToString() : "";
+				colorCBIx.Add(i);
 				colorIx++;
 			}			
 		}
-
-		colorIx = colorIx > 11 ? 11 : colorIx;
 	}
 
 	void mainPress(KMSelectable button)
@@ -501,65 +513,176 @@ public class SynapseCipherScript : MonoBehaviour {
 
 		for (int i = 0; i < 3; i++)
 		{
-			switch (screenText[i].text.Length)
-			{
-				case 7:
-					screenText[i].fontSize = 250;
-					break;
-				case 8:
-					screenText[i].fontSize = 225;
-					break;
-				default:
-					screenText[i].fontSize = 300;
-					break;
-			}
+			screenText[i].fontSize = screenText[i].text.Length == 7 ? 250 : screenText[i].text.Length == 8 ? 225 : 300;
 		}
     }
 
 	void backPress()
+	{
+		if (moduleSolved || !isActive || !inSubmission || colorIx == 0)
+		{
+			return;
+		}
+
+		Audio.PlaySoundAtTransform("Clear", transform);
+
+		if (submissionString.Length > 0)
+		{
+            submissionString = submissionString.Remove(submissionString.Length - 1);
+			colorCBIx.RemoveAt(colorCBIx.Count - 1);
+        }
+        colorIx--;
+        squares[colorIx].SetActive(false);
+
+    }
+
+	void submitPress()
 	{
 		if (moduleSolved || !isActive || !inSubmission)
 		{
 			return;
 		}
 
-		if (colorIx > 0)
+		if (submissionString == colorEncrypted)
 		{
-			submissionString = submissionString.Remove(submissionString.Length - 1);
-			squares[colorIx].SetActive(false);
-			colorIx--;
+			giveSolve();
+		}
+		else
+		{
+			StartCoroutine(giveStrike());
+		}
+
+	}
+
+	void giveSolve()
+	{
+		inSubmission = false;
+		foreach (var text in buttonCB)
+		{
+			text.text = "";
+		}
+		foreach (var squareText in squareCB)
+		{
+			squareText.text = "";
+		}
+
+		Audio.PlaySoundAtTransform("Solve", transform);
+		StartCoroutine(solveStatusLight());
+		StartCoroutine(solveSquarePatterns());
+		moduleSolved = true;
+		Module.HandlePass();
+	}
+
+	IEnumerator solveStatusLight()
+	{
+		yield return null;
+
+		while (true)
+		{
+			for (int i = 0; i < 5; i++)
+			{
+				statusLightObj.material = colors[i];
+				yield return new WaitForSeconds(0.2f);
+			}
 		}
 	}
 
-	void submitPress()
+	IEnumerator solveSquarePatterns()
 	{
-		if (moduleSolved || !isActive)
+		yield return null;
+
+		var ix = 0;
+
+		while (true)
 		{
-			return;
+			for (int i = 0; i < submissionString.Length; i++)
+			{
+				squareRender[i].material = colors[ix];
+				yield return new WaitForSeconds(0.015f);
+			}
+			ix++;
+			ix %= 5;
+			for (int j = submissionString.Length - 1; j >= 0; j--)
+			{
+				squareRender[j].material = colors[ix];
+				yield return new WaitForSeconds(0.015f);
+			}
+			ix++;
+			ix %= 5;
 		}
-
-		StartCoroutine(submissionString.Equals(colorEncrypted) ? solve() : strike());
 	}
 
-	IEnumerator solve()
+	IEnumerator giveStrike()
 	{
 		yield return null;
+		colorCBIx.Clear();
+		colorIx = 0;
+		foreach (var square in squares)
+		{
+			square.gameObject.SetActive(false);
+		}
+        foreach (TextMesh square in squareCB)
+        {
+            square.text = "";
+        }
+		Audio.PlaySoundAtTransform("Strike", transform);
+		Module.HandleStrike();
+		submissionWindow.SetActive(false);
+		mainWindow.SetActive(true);
+		inSubmission = false;
+        int[] colorSolIx = colorEncrypted.Select(x => "01234".IndexOf(x)).ToArray();
+        string colorSeq = "";
+		string submittedSeq = "";
+        for (int i = 0; i < colorSolIx.Length; i++)
+        {
+
+            colorSeq += "GRBYJ"[colorSolIx[i]];			
+        }
+
+        if (submissionString.Length > 0)
+        {
+			for (int i = 0; i < submissionString.Length; i++)
+			{
+                int submittedIx;
+                int.TryParse(submissionString[i].ToString(), out submittedIx);
+                submittedSeq += "GRBYJ"[submittedIx];
+            }            
+        }
+        QuickLog("Expected {0}, but inputted {1}. Strike!", colorSeq, submittedSeq.Length == 0 ? "nothing" : submittedSeq);
+        submissionString = string.Empty;
+        var ix = 0;
+		while (ix != 3)
+		{
+			statusLightObj.material = colors[1];
+			yield return new WaitForSeconds(0.33f);
+			statusLightObj.material = statusLightUnsolvedColor;
+			yield return new WaitForSeconds(0.33f);
+			ix++;
+		}
 	}
 
-	IEnumerator strike()
-	{
-		yield return null;
-	}
 
 	void subMode()
 	{
 		inSubmission = true;
 		mainWindow.SetActive(false);
 		submissionWindow.SetActive(true);
-	}
+        for (int i = 0; i < 5; i++)
+        {
+            buttonCB[i].text = cbActive ? colorNames[i].ToUpperInvariant() : "";
+        }
+    }
 
 	void resetPress()
 	{
+		Audio.PlaySoundAtTransform("Click", transform);
+		reset.AddInteractionPunch(0.4f);
+
+		if (moduleSolved || !inSubmission)
+		{
+			return;
+		}
+
 		inSubmission = false;
 		submissionWindow.SetActive(false);
 		mainWindow.SetActive(true);
@@ -574,21 +697,208 @@ public class SynapseCipherScript : MonoBehaviour {
 
 	// Twitch Plays
 
+	void updateCBTP()
+	{
+		cbActive = !cbActive;
+
+		for (int i = 0; i < colorCBIx.Count; i++)
+		{
+			squareCB[i].text = cbActive ? colorNames[colorCBIx[i]][0].ToString() : "";
+		}
+
+		for (int i = 0; i < 5; i++)
+		{
+			buttonCB[i].text = cbActive ? colorNames[i].ToUpperInvariant() : "";
+		}
+	}
+
 
 #pragma warning disable 414
-	private readonly string TwitchHelpMessage = @"Use <!{0} foobar> to do something.";
+	private readonly string TwitchHelpMessage = @"!{0} CB to toggle colorblind mode. || !{0} submit to go into submission mode or submit your answer if it's already in submission mode. || !{0} input grbyj to input your submission. || !{0} clear 1234567890/all to clear the number of squares or clear all of the squares.";
 #pragma warning restore 414
 
 	IEnumerator ProcessTwitchCommand (string command)
     {
-		command = command.Trim().ToUpperInvariant();
-		List<string> parameters = command.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
 		yield return null;
+
+		string[] split = command.ToUpperInvariant().Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+
+		if (!isActive)
+		{
+			yield return "sendtochaterror You cannot interact with the module yet!";
+			yield break;
+		}
+
+		if (split[0].EqualsIgnoreCase("CB"))
+		{
+			updateCBTP();
+			yield break;
+		}
+
+		if (split[0].EqualsIgnoreCase("L") || split[0].EqualsIgnoreCase("LEFT") || split[0].EqualsIgnoreCase("R") || split[0].EqualsIgnoreCase("RIGHT"))
+		{
+			if (inSubmission)
+			{
+				yield return "sendtochaterror You cannot go to any page while in submission mode!";
+				yield break;
+			}
+
+			switch (split[0])
+			{
+				case "L":
+				case "LEFT":
+					mainButtons[0].OnInteract();
+					yield return new WaitForSeconds(0.1f);
+					break;
+				case "R":
+				case "RIGHT":
+					mainButtons[2].OnInteract();
+					yield return new WaitForSeconds(0.1f);
+					break;
+			}
+			yield break;
+		}
+
+		if (split[0].EqualsIgnoreCase("SUBMIT"))
+		{
+			if (!inSubmission)
+			{
+				mainButtons[1].OnInteract();
+				yield return new WaitForSeconds(0.1f);
+				yield break;
+			}
+			else
+			{
+				submit.OnInteract();
+				yield return new WaitForSeconds(0.1f);
+				yield break;
+			}
+		}
+
+		if (split[0].EqualsIgnoreCase("INPUT"))
+		{
+			if (!inSubmission)
+			{
+				yield return "sendtochaterror You cannot input anything when it's not in submission mode!";
+				yield break;
+			}
+			else if (split.Length == 1)
+			{
+				yield return "sendtochaterror Please input your colors!";
+				yield break;
+			}
+			else if (split[1].Any(x => !"GRBYJ".Contains(x)))
+			{
+				var filter = split[1].Where(x => !"GRBYJ".Contains(x)).ToArray();
+				var statement = filter.Length > 1 ? "aren't actual color names" : "isn't an actual color name";
+				yield return $"sendtochaterror {filter.Join(", ")} {statement}!";
+				yield break;
+			}
+			else if (split[1].Length > 24 - submissionString.Length || submissionString.Length == 24)
+			{
+				int length = 24 - submissionString.Length;
+				var statement = submissionString.Length == 24 ? "You cannot input anymore squares. Clear some before reinputting!" : $"Your input is more than {length} squares already inputted!";
+				yield return $"sendtochaterror {statement}";
+				yield break;
+			}
+
+			var colorsToPress = split[1].Select(x => "GRBYJ".IndexOf(x)).ToList();
+
+			for (int i = 0; i < colorsToPress.Count; i++)
+			{
+				colorButtons[colorsToPress[i]].OnInteract();
+				yield return new WaitForSeconds(0.1f);
+			}
+			yield break;
+		}
+
+		if (split[0].EqualsIgnoreCase("CLEAR"))
+		{
+			if (split.Length == 1)
+			{
+				yield return "sendtochaterror Please specify the number of squares to clear, or clear all to reset your input!";
+				yield break;
+			}
+			else if (split[1].EqualsIgnoreCase("ALL"))
+			{
+				while (submissionString.Length != 0)
+				{
+					back.OnInteract();
+					yield return new WaitForSeconds(0.1f);
+				}
+				yield break;
+			}
+			else if (split[1].Any(x => !"1234567890".Contains(x)))
+			{
+				var invalids = split[1].Where(x => !"1234567890".Contains(x)).ToArray();
+				var statement = invalids.Length > 1 ? "aren't actual numbers" : "isn't an actual number";
+				yield return $"sendtochaterror {invalids.Join(", ")} {statement}!";
+				yield break;
+			}
+			int numberOfClears;
+			int.TryParse(split[1], out numberOfClears);
+
+			if (numberOfClears > 24 - submissionString.Length || numberOfClears > 24 || numberOfClears == 0)
+			{
+				yield break;
+			}
+
+			for (int i = numberOfClears - 1; i >= 0; i--)
+			{
+				back.OnInteract();
+				yield return new WaitForSeconds(0.1f);
+			}
+			yield break;
+		}
+		
+		if (split[0].EqualsIgnoreCase("BACK"))
+		{
+			if (!inSubmission)
+			{
+				yield return "sendtochaterror You cannot go back since you've already returned to the main window!";
+				yield break;
+			}
+			reset.OnInteract();
+			yield return new WaitForSeconds(0.1f);
+			yield break;
+		}
+
     }
 
 	IEnumerator TwitchHandleForcedSolve()
     {
 		yield return null;
+
+		while (!isActive)
+		{
+			yield return true;
+		}
+
+		if (!inSubmission)
+		{
+			mainButtons[1].OnInteract();
+			yield return new WaitForSeconds(0.1f);
+		}
+
+		if (inSubmission)
+		{
+			while (!colorEncrypted.StartsWith(submissionString))
+			{
+				back.OnInteract();
+				yield return new WaitForSeconds(0.1f);
+			}
+		}
+
+		int start = inSubmission ? submissionString.Length : 0;
+		var solutionColors = colorEncrypted.Select(x => "01234".IndexOf(x)).ToArray();
+
+		for (int i = start; i < colorEncrypted.Length; i++)
+		{
+			colorButtons[solutionColors[i]].OnInteract();
+			yield return new WaitForSeconds(0.1f);
+		}
+		submit.OnInteract();
+
     }
 
 
