@@ -814,6 +814,12 @@ public class SynapseCipherScript : MonoBehaviour {
 
 		if (split[0].EqualsIgnoreCase("CLEAR"))
 		{
+			if (!inSubmission)
+			{
+				yield return "sendtochaterror You cannot clear any squares while it's not in submission mode!";
+				yield break;
+			}
+
 			if (split.Length == 1)
 			{
 				yield return "sendtochaterror Please specify the number of squares to clear, or clear all to reset your input!";
