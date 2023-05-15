@@ -714,7 +714,7 @@ public class SynapseCipherScript : MonoBehaviour {
 
 
 #pragma warning disable 414
-	private readonly string TwitchHelpMessage = @"!{0} CB to toggle colorblind mode. || !{0} submit to go into submission mode or submit your answer if it's already in submission mode. || !{0} input grbyj to input your submission. || !{0} clear 1234567890/all to clear the number of squares or clear all of the squares.";
+	private readonly string TwitchHelpMessage = @"!{0} L/left/R/right to flip the pages left or right on the module. || !{0} CB to toggle colorblind mode. || !{0} submit to go into submission mode or submit your answer if it's already in submission mode. || !{0} input grbyj to input your submission. || !{0} clear 1234567890/all to clear the number of squares or clear all of the squares.";
 #pragma warning restore 414
 
 	IEnumerator ProcessTwitchCommand (string command)
