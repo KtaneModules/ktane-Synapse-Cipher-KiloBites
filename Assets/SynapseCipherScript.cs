@@ -729,52 +729,66 @@ public class SynapseCipherScript : MonoBehaviour {
 			yield break;
 		}
 
-		if (split[0].EqualsIgnoreCase("CB"))
-		{
-			updateCBTP();
+		if (!split.Any())
 			yield break;
-		}
-
-		if (split[0].EqualsIgnoreCase("L") || split[0].EqualsIgnoreCase("LEFT") || split[0].EqualsIgnoreCase("R") || split[0].EqualsIgnoreCase("RIGHT"))
+		if (split.Length == 1)
 		{
-			if (inSubmission)
+			if (split[0].EqualsIgnoreCase("CB"))
 			{
-				yield return "sendtochaterror You cannot go to any page while in submission mode!";
+				updateCBTP();
 				yield break;
 			}
 
-			switch (split[0])
+			if (split[0].EqualsIgnoreCase("L") || split[0].EqualsIgnoreCase("LEFT") || split[0].EqualsIgnoreCase("R") || split[0].EqualsIgnoreCase("RIGHT"))
 			{
-				case "L":
-				case "LEFT":
-					mainButtons[0].OnInteract();
-					yield return new WaitForSeconds(0.1f);
-					break;
-				case "R":
-				case "RIGHT":
-					mainButtons[2].OnInteract();
-					yield return new WaitForSeconds(0.1f);
-					break;
-			}
-			yield break;
-		}
+				if (inSubmission)
+				{
+					yield return "sendtochaterror You cannot go to any page while in submission mode!";
+					yield break;
+				}
 
-		if (split[0].EqualsIgnoreCase("SUBMIT"))
-		{
-			if (!inSubmission)
+				switch (split[0])
+				{
+					case "L":
+					case "LEFT":
+						mainButtons[0].OnInteract();
+						yield return new WaitForSeconds(0.1f);
+						break;
+					case "R":
+					case "RIGHT":
+						mainButtons[2].OnInteract();
+						yield return new WaitForSeconds(0.1f);
+						break;
+				}
+				yield break;
+			}
+			if (split[0].EqualsIgnoreCase("BACK"))
 			{
-				mainButtons[1].OnInteract();
+				if (!inSubmission)
+				{
+					yield return "sendtochaterror You cannot go back since you've already returned to the main window!";
+					yield break;
+				}
+				reset.OnInteract();
 				yield return new WaitForSeconds(0.1f);
 				yield break;
 			}
-			else
+			if (split[0].EqualsIgnoreCase("SUBMIT"))
 			{
-				submit.OnInteract();
-				yield return new WaitForSeconds(0.1f);
-				yield break;
+				if (!inSubmission)
+				{
+					mainButtons[1].OnInteract();
+					yield return new WaitForSeconds(0.1f);
+					yield break;
+				}
+				else
+				{
+					submit.OnInteract();
+					yield return new WaitForSeconds(0.1f);
+					yield break;
+				}
 			}
 		}
-
 		if (split[0].EqualsIgnoreCase("INPUT"))
 		{
 			if (!inSubmission)
@@ -784,17 +798,23 @@ public class SynapseCipherScript : MonoBehaviour {
 			}
 			else if (split.Length == 1)
 			{
-				yield return "sendtochaterror Please input your colors!";
+				yield return "sendtochaterror Please input your colors! You specified no colors in your command.";
 				yield break;
 			}
-			else if (split[1].Any(x => !"GRBYJ".Contains(x)))
-			{
-				var filter = split[1].Where(x => !"GRBYJ".Contains(x)).ToArray();
-				var statement = filter.Length > 1 ? "aren't actual color names" : "isn't an actual color name";
-				yield return $"sendtochaterror {filter.Join(", ")} {statement}!";
-				yield break;
+			var allColorsToPress = new List<int>();
+			for (var p = 1; p < split.Length; p++)
+            {
+				if (split[p].Any(x => !"GRBYJ".Contains(x)))
+				{
+					var filter = split[1].Where(x => !"GRBYJ".Contains(x)).ToArray();
+					var statement = filter.Length > 1 ? "aren't actual color names" : "isn't an actual color name";
+					yield return $"sendtochaterror {filter.Join(", ")} {statement}!";
+					yield break;
+				}
+				allColorsToPress.AddRange(split[p].Select(x => "GRBYJ".IndexOf(x)));
 			}
-			else if (split[1].Length > 24 - submissionString.Length || submissionString.Length == 24)
+
+			if (allColorsToPress.Count > 24 - submissionString.Length || allColorsToPress.Count == 24)
 			{
 				int length = 24 - submissionString.Length;
 				var statement = submissionString.Length == 24 ? "You cannot input anymore squares. Clear some before reinputting!" : $"Your input is more than {length} squares already inputted!";
@@ -802,11 +822,9 @@ public class SynapseCipherScript : MonoBehaviour {
 				yield break;
 			}
 
-			var colorsToPress = split[1].Select(x => "GRBYJ".IndexOf(x)).ToList();
-
-			for (int i = 0; i < colorsToPress.Count; i++)
+			for (int i = 0; i < allColorsToPress.Count; i++)
 			{
-				colorButtons[colorsToPress[i]].OnInteract();
+				colorButtons[allColorsToPress[i]].OnInteract();
 				yield return new WaitForSeconds(0.1f);
 			}
 			yield break;
@@ -820,7 +838,7 @@ public class SynapseCipherScript : MonoBehaviour {
 				yield break;
 			}
 
-			if (split.Length == 1)
+			if (split.Length != 2)
 			{
 				yield return "sendtochaterror Please specify the number of squares to clear, or clear all to reset your input!";
 				yield break;
@@ -842,9 +860,9 @@ public class SynapseCipherScript : MonoBehaviour {
 				yield break;
 			}
 			int numberOfClears;
-			int.TryParse(split[1], out numberOfClears);
+			
 
-			if (numberOfClears > 24 - submissionString.Length || numberOfClears > 24 || numberOfClears == 0)
+			if (!int.TryParse(split[1], out numberOfClears) || numberOfClears > 24 - submissionString.Length || numberOfClears > 24 || numberOfClears == 0)
 			{
 				yield break;
 			}
@@ -854,18 +872,6 @@ public class SynapseCipherScript : MonoBehaviour {
 				back.OnInteract();
 				yield return new WaitForSeconds(0.1f);
 			}
-			yield break;
-		}
-		
-		if (split[0].EqualsIgnoreCase("BACK"))
-		{
-			if (!inSubmission)
-			{
-				yield return "sendtochaterror You cannot go back since you've already returned to the main window!";
-				yield break;
-			}
-			reset.OnInteract();
-			yield return new WaitForSeconds(0.1f);
 			yield break;
 		}
 
